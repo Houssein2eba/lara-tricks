@@ -1,32 +1,36 @@
 # Step 6: Order workflow and staff dashboard
 
-**Days:** 16-18  
+**Days:** 26-30 (Week 6)  
 **Branches:** `feature/order-workflow`, then `feature/staff-dashboard`
 
 ## Goal
 
 Learn how to model allowed status changes and protect staff-only operations.
 
-## Day 16: `feature/order-workflow`
+## Days 26-27: `feature/order-workflow`
 
-- Add an order status model with a small explicit lifecycle:
+- Day 26: add an order status enum and document a small explicit lifecycle:
   `pending -> accepted -> preparing -> ready -> completed`, with cancellation
   allowed only at defined stages.
-- Centralize allowed transitions in a domain method/service; do not accept an
-  arbitrary status string from the browser.
-- Add tests for valid and invalid transitions.
+- Day 27: centralize allowed transitions in a domain method/service and add
+  tests for valid and invalid transitions.
+- Never accept an arbitrary status string from the browser.
 
 **Checkpoint:** A customer cannot mark their own order completed or jump it
 directly from pending to ready.
 
-## Days 17-18: `feature/staff-dashboard`
+## Days 28-30: `feature/staff-dashboard`
 
 - Merge the workflow branch, then branch from updated `main`.
-- Add a simple staff role and a policy/middleware for staff order management.
-- Build a staff queue page with newest pending orders, item summaries, and
-  allowed status actions.
+- Day 28: add the staff flag and policy/middleware; keep role assignment out of
+  public registration.
+- Day 29: build a staff queue with newest pending orders, item summaries, and
+  only valid status actions.
+- Day 30: test customer denial, staff access, order ownership, and invalid
+  transitions; review queries for unnecessary data.
 - Keep customer order history scoped to the authenticated user's orders.
-- Seed a clearly documented local-only staff account; do not commit credentials.
+- Use only a clearly documented local-only staff setup; never commit account
+  credentials.
 
 **Checkpoint:** Feature tests prove customers cannot access staff routes and
 staff can update an order only through allowed transitions.
@@ -44,8 +48,8 @@ controlled workflow.
 
 ## Branch closeout
 
-Run authorization and transition tests, then merge `feature/order-workflow`
-and `feature/staff-dashboard`.
+Run authorization, ownership, and transition tests, then merge
+`feature/order-workflow` and `feature/staff-dashboard`.
 
 ## References
 

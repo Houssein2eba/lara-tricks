@@ -1,15 +1,25 @@
-# Step 8: Email and in-app notifications
+# Step 7: Email and in-app notifications
 
-**Days:** 22-24  
+**Days:** 31-35 (Week 7)  
 **Branches:** `feature/email-notifications`, then
 `feature/in-app-notifications`
 
-## Goal
+## Learning goal
 
 Notify a customer when an order is accepted or its status changes, using a local
 email catcher and a persistent in-app notification list.
 
-## Day 22: `feature/email-notifications`
+## Day 31: Set up a local email catcher
+
+- Create `feature/email-notifications` from updated `main` before changing
+  Compose or mail configuration.
+- Add Mailpit to the Compose network and confirm the web UI is reachable.
+- Configure only local `.env` mail values; do not send to a real SMTP server.
+
+**Checkpoint:** A test message appears in Mailpit and no real recipient is
+contacted.
+
+## Day 32: `feature/email-notifications`
 
 - Add a local Mailpit service to Compose and configure Laravel's mail settings
   for its SMTP host/port.
@@ -21,26 +31,34 @@ email catcher and a persistent in-app notification list.
 **Checkpoint:** The test asserts an email is queued/sent, and the local message
 can be previewed without contacting a real recipient.
 
-## Day 23: Queue and delivery behavior
+## Day 33: Queue and delivery behavior
 
 - Learn notification channels, queueing, and failure handling.
-- Queue email if the current queue setup is understood and working; otherwise
-  keep this demo synchronous and record queueing as follow-up work.
+- Use Laravel's database queue for the exercise and run a worker in a second
+  terminal; understand how a failed job is inspected.
+- Queue the notification only after the order-status transaction commits.
 - Ensure emails contain only the recipient's own order details.
 - Test that unrelated users receive no notification.
 
 **Checkpoint:** Delivery failures are visible in logs/failed jobs; they are not
 silently treated as success.
 
-## Day 24: `feature/in-app-notifications`
+## Day 34: `feature/in-app-notifications`
 
 - Branch from updated `main`.
 - Add Laravel's database notification table and an authenticated notification
-  list/read action.
+  list/read action. Scope every query to the authenticated user.
+
+**Checkpoint:** A user cannot read or mark another user's notification as read.
+
+## Day 35: Build and verify the notification UI
+
 - Add a Vue notification bell/list and use the existing toast library for brief
   foreground feedback.
 - Optionally explore the browser Notification API only after explicit user
   permission; never request permission on page load.
+- Test that the recipient's list updates and another user's records stay
+  private.
 
 **Checkpoint:** A user sees and can mark their own order notification as read;
 tests verify notification ownership.
@@ -156,6 +174,24 @@ Notification::assertSentTo(
     OrderStatusUpdated::class,
 );
 ```
+
+For the queue exercise, set `QUEUE_CONNECTION=database` in the local `.env`,
+create the jobs table if it is absent, and run migrations:
+
+```powershell
+docker compose exec laravel.test php artisan make:queue-table
+docker compose exec laravel.test php artisan migrate
+```
+
+Make the notification implement `Illuminate\Contracts\Queue\ShouldQueue`,
+then run a worker in another terminal:
+
+```powershell
+docker compose exec laravel.test php artisan queue:work --tries=3
+```
+
+Inspect failed jobs with `php artisan queue:failed`; do not assume that a
+queued notification was delivered just because the request succeeded.
 
 ## Part C: display and mark in-app notifications
 

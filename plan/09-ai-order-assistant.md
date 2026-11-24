@@ -1,363 +1,338 @@
-# Step 9: AI provider and order assistant
+# Step 9: Optional AI menu assistant
 
-**Days:** 25-27  
-**Branches:** `feature/ai-provider` (Days 25-26), then
-`feature/ai-order-assistant` (Day 27)
+**Days:** 41-45 (Week 9; optional extension)  
+**Branch:** `feature/ai-menu-assistant`
+
+## Why this is optional
+
+Finish and test the core ordering site before adding AI. AI introduces provider
+cost, privacy, availability, and prompt-injection concerns; it is not required
+to learn Laravel, Inertia, or Vue.
+
+For the first version, keep the integration in Laravel's HTTP client. Do not
+add a Node microservice or Vercel AI SDK to the core course: they create a
+second server stack and obscure the Laravel request flow. If learning Vercel AI
+SDK is still a goal, build it later as a separate experiment after this
+server-side version is understood.
+
+Use an OpenAI-compatible provider such as OpenRouter only if you have access to
+a currently available free model. Free model IDs, quotas, and availability
+change; never promise that a free tier will remain usable. Do not send customer
+or order data to the model.
 
 ## Goal
 
-Build one narrow AI feature that helps a customer understand the menu and their
-own order. AI must not be trusted to change an order or bypass authorization.
+Build a rate-limited assistant that can answer short questions using only
+currently available menu data. It cannot place, cancel, or change orders.
 
-## Day 25: Provider and architecture spike
+## Day 41: Decide whether it adds value
 
-- Read the AI SDK Vue UI documentation and OpenRouter's current free-model
-  documentation.
-- Use Vercel AI SDK's Vue package for the chat UI. Keep all provider credentials
-  server-side; never put an API key in a `VITE_` variable or browser bundle.
-- Since this app's server is PHP, choose and document a small server-side
-  adapter before implementation. The recommended learning path is a private
-  Node service using the AI SDK, with Laravel authenticating/authorizing and
-  proxying the request. Do not expose the Node service or API key directly to
-  the browser.
-- Use OpenRouter's OpenAI-compatible API and select an available `:free` model
-  dynamically from its current catalog. Free models and quotas change; its
-  FAQ currently states a default limit of 50 free-model requests per day
-  without purchased credits. Verify the live limit before each session; do not
-  build production availability assumptions around a free tier.
+- Write three menu questions the existing menu UI does not answer well.
+- Decide what public menu fields the assistant may use.
+- If the core flow or tests are still failing, skip this optional branch and
+  continue to Step 10.
 
-**Checkpoint:** A local-only spike returns one assistant answer. No key is in
-source control, Vite env, page props, or browser network headers.
+**Checkpoint:** A short scope statement describes what the assistant can and
+cannot do.
 
-## Day 26: `feature/ai-provider`
+## Day 42: Configure a server-side provider
 
-- Continue the provider branch and create a server-side provider adapter.
-- Store the key in an untracked `.env` entry and pass it only to the server
-  container.
-- Add timeouts, input length limits, server-side rate limiting, and clear
-  provider error handling.
-- Log request metadata without logging secrets or unnecessary customer
-  messages.
+- Keep the API key only in the untracked local `.env`.
+- Add the provider URL, key, and selected model to `config/services.php`.
+- Verify that no key is placed in a `VITE_*` variable, page prop, or browser
+  request.
 
-**Checkpoint:** A missing key, timeout, rate limit, or provider error produces a
-useful safe response, never a fake successful answer.
+**Checkpoint:** Laravel can read the configuration, and the key is absent from
+source control and frontend output.
 
-## Day 27: `feature/ai-order-assistant`
+## Day 43: Add a bounded Laravel endpoint
 
-- Merge `feature/ai-provider`, then create `feature/ai-order-assistant` from
-  updated `main`.
-- Add a Vue chat panel with loading, streaming/response, empty, and error states.
-- Limit the assistant to menu questions and, for an authenticated owner, a
-  read-only lookup of that user's order status.
-- Validate any tool arguments on the server. Re-check user ownership before
-  every order lookup.
-- State that the answer may be wrong; link to the authoritative order screen.
-- Do not allow the model to cancel, submit, refund, or modify an order.
+- Require authentication and rate-limit requests.
+- Validate the question length and send only available menu fields to the
+  provider.
+- Set a short timeout and return a clear error for missing credentials,
+  provider rejection, empty output, or connection failure.
+- Do not log prompts, API keys, or full provider responses.
 
-**Checkpoint:** Tests prove the AI endpoint is authenticated/rate-limited as
-designed and cannot read another user's order.
+**Checkpoint:** A fake-provider test covers a successful answer and at least
+one failure without making a real API call.
 
-## Deliverable
+## Day 44: Add the Vue form
 
-A small, clearly labeled menu/order helper that degrades gracefully when the
-free provider is unavailable.
+- Build a small Inertia form with processing, answer, and error states.
+- Render the response as plain text; do not treat model output as trusted HTML.
+- Tell the user to confirm prices and availability on the menu page.
 
-## Branch closeout
+**Checkpoint:** Keyboard users can submit the form and understand its loading
+and failure states.
 
-Review privacy, cost limits, provider key handling, and authorization. Merge
-`feature/ai-provider`, then `feature/ai-order-assistant`.
+## Day 45: Review safety and decide whether to keep it
 
-## References
+- Test that request limits work and the endpoint cannot access order data.
+- Check that unavailable menu items are not sent to the provider.
+- Compare provider latency and reliability with the cost of maintaining the
+  feature.
+- Remove the branch from the release scope if it creates more risk than value.
 
-- [AI SDK UI overview and Vue support](https://ai-sdk.dev/docs/ai-sdk-ui/overview)
-- [AI SDK chatbot UI](https://ai-sdk.dev/docs/ai-sdk-ui/chatbot)
-- [AI SDK OpenAI-compatible providers](https://ai-sdk.dev/providers/openai-compatible-providers)
-- [OpenRouter quickstart](https://openrouter.ai/docs/quickstart)
-- [OpenRouter free-model rate limits and privacy FAQ](https://openrouter.ai/docs/faq)
+**Checkpoint:** The feature is optional, bounded, and covered by fake-provider
+tests; no test consumes a live API quota.
 
 ## Tutorial file map
 
-The recommended capstone keeps the AI key outside the browser:
-
 ```text
-ai-service/package.json
-ai-service/package-lock.json
-ai-service/Dockerfile
-ai-service/src/server.ts
-app/Http/Controllers/AiChatController.php
-config/services.php             add the ai endpoint/token config
-routes/web.php
-resources/js/components/ai/OrderAssistant.vue
-compose.yaml                    add an optional internal ai service
-.env                         local only; never commit
+app/Http/Controllers/AiMenuAssistantController.php
+config/services.php                 add provider configuration
+routes/web.php                      add authenticated, rate-limited route
+resources/js/pages/ai/Index.vue
+tests/Feature/AiMenuAssistantTest.php
+.env                                local only; never commit
 ```
 
-This is intentionally an advanced optional service: the application server is
-PHP, while the Vercel AI SDK is TypeScript. Build and secure the narrow provider
-spike before adding tools or order lookups.
+## Part A: configure the provider
 
-## Part A: create the private Node service
-
-Create the folders from PowerShell:
-
-```powershell
-New-Item -ItemType Directory -Force ai-service\src
-docker compose exec laravel.test npm init -y --prefix ai-service
-docker compose exec laravel.test npm install --prefix ai-service ai @ai-sdk/openai-compatible hono @hono/node-server zod
-docker compose exec laravel.test npm install --prefix ai-service --save-dev typescript tsx @types/node
-docker compose exec laravel.test npm install ai @ai-sdk/vue
-```
-
-This writes `ai-service/package.json` and `package-lock.json`; commit both so
-the image build is repeatable. Merge these entries into the generated package
-file, preserving its installed dependencies:
-
-```json
-"type": "module",
-"scripts": {
-    "start": "tsx src/server.ts"
-}
-```
-
-In `ai-service/Dockerfile`:
-
-```dockerfile
-FROM node:24-alpine
-
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY src ./src
-CMD ["npm", "run", "start"]
-```
-
-Keep the AI service on the Compose network only; do not publish its port to the
-host. Add local `.env` entries (values are placeholders, not real secrets):
+Add these local-only values to `.env`, choosing a model that is currently
+available to your account:
 
 ```dotenv
 OPENROUTER_API_KEY=replace-locally
-OPENROUTER_MODEL=choose-an-available-model-id
-AI_SERVICE_TOKEN=replace-with-a-long-random-local-token
-AI_SERVICE_URL=http://ai:3000
+OPENROUTER_MODEL=choose-a-current-model-id
 ```
 
-In `compose.yaml`, add the private, opt-in service and pass the server-only
-values. Add the two `AI_SERVICE_*` mappings to the existing `laravel.test`
-environment so Laravel can proxy authenticated requests:
-
-```yaml
-services:
-    laravel.test:
-        environment:
-            AI_SERVICE_URL: '${AI_SERVICE_URL:-http://ai:3000}'
-            AI_SERVICE_TOKEN: '${AI_SERVICE_TOKEN:-}'
-    ai:
-        build:
-            context: './ai-service'
-        profiles: ['ai']
-        expose:
-            - '3000'
-        environment:
-            OPENROUTER_API_KEY: '${OPENROUTER_API_KEY:-}'
-            OPENROUTER_MODEL: '${OPENROUTER_MODEL:-}'
-            AI_SERVICE_TOKEN: '${AI_SERVICE_TOKEN:-}'
-        networks:
-            - sail
-```
-
-The `ai` profile keeps the optional service from starting during ordinary app
-work. Start it only when studying this step:
-
-```powershell
-docker compose --profile ai up -d --build
-```
-
-Stop the optional service when you finish to release its memory:
-
-```powershell
-docker compose stop ai
-```
-
-Select an available `:free` model from the live OpenRouter catalog. Free model
-names, availability, and request quotas can change. Do not put these entries in
-`VITE_*` variables or commit them.
-
-## Part B: create a small AI SDK endpoint
-
-In `ai-service/src/server.ts`, the important server-side shape is:
-
-```ts
-import { serve } from '@hono/node-server';
-import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import {
-    convertToModelMessages,
-    createUIMessageStreamResponse,
-    streamText,
-    toUIMessageStream,
-    type UIMessage,
-} from 'ai';
-import { Hono } from 'hono';
-
-const app = new Hono();
-const serviceToken = process.env.AI_SERVICE_TOKEN;
-const apiKey = process.env.OPENROUTER_API_KEY;
-const modelId = process.env.OPENROUTER_MODEL;
-
-if (!serviceToken || !apiKey || !modelId) {
-    throw new Error('AI service environment is incomplete.');
-}
-
-const provider = createOpenAICompatible({
-    name: 'openrouter',
-    baseURL: 'https://openrouter.ai/api/v1',
-    apiKey,
-});
-
-app.post('/chat', async (context) => {
-    if (context.req.header('X-AI-Service-Token') !== serviceToken) {
-        return context.json({ message: 'Forbidden' }, 403);
-    }
-
-    const body = await context.req.json<{ messages: UIMessage[] }>();
-    if (!Array.isArray(body.messages) || body.messages.length > 12) {
-        return context.json({ message: 'Invalid conversation.' }, 422);
-    }
-
-    const result = streamText({
-        model: provider(modelId),
-        system: 'Answer menu questions briefly. Never change an order.',
-        messages: await convertToModelMessages(body.messages),
-        maxOutputTokens: 300,
-    });
-
-    return createUIMessageStreamResponse({
-        stream: toUIMessageStream({ stream: result.stream }),
-    });
-});
-
-serve({ fetch: app.fetch, port: 3000 });
-```
-
-Before using this sample, verify package APIs against the installed AI SDK
-version. Add schema validation for every message and request size; the short
-example is not a substitute for that validation.
-
-## Part C: protect the browser-to-model path
-
-The Vue page should send chat requests to an authenticated Laravel route, not
-directly to OpenRouter or the private AI service. In
-`routes/web.php`, add an authenticated, rate-limited endpoint:
+Inside the array returned by `config/services.php`, add:
 
 ```php
-Route::post('/ai/chat', AiChatController::class)
-    ->middleware(['auth', 'verified', 'throttle:10,1'])
-    ->name('ai.chat');
-```
-
-Add this entry inside the existing returned array in `config/services.php`:
-
-```php
-'ai' => [
-    'url' => env('AI_SERVICE_URL', 'http://ai:3000'),
-    'token' => env('AI_SERVICE_TOKEN'),
+'openrouter' => [
+    'base_url' => env('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
+    'api_key' => env('OPENROUTER_API_KEY'),
+    'model' => env('OPENROUTER_MODEL'),
 ],
 ```
 
-In `AiChatController`, validate request size, authorize the customer, and
-forward to the private service. The controller must stream the response rather
-than return the provider key or buffer a long response:
+Never expose the key through `VITE_*` configuration or share it with Vue.
+
+## Part B: validate, limit, and call from Laravel
+
+In `routes/web.php`, import the controller and add both routes inside the
+existing `auth` and `verified` group:
 
 ```php
-$data = $request->validate([
-    'messages' => ['required', 'array', 'min:1', 'max:12'],
-]);
+Route::get('/ai/menu-assistant', [AiMenuAssistantController::class, 'index'])
+    ->name('ai.index');
 
-$upstream = Http::withOptions(['stream' => true])
-    ->withHeaders([
-        'X-AI-Service-Token' => config('services.ai.token'),
-    ])
-    ->timeout(30)
-    ->post(rtrim(config('services.ai.url'), '/').'/chat', $data);
-
-if ($upstream->failed()) {
-    return response()->json(['message' => 'AI service unavailable.'], 502);
-}
-
-$body = $upstream->toPsrResponse()->getBody();
-
-return response()->stream(function () use ($body): void {
-    while (! $body->eof()) {
-        echo $body->read(1024);
-        if (ob_get_level() > 0) {
-            ob_flush();
-        }
-        flush();
-    }
-}, $upstream->status(), [
-    'Content-Type' => $upstream->header('Content-Type', 'text/event-stream'),
-    'Cache-Control' => 'no-cache',
-]);
+Route::post('/ai/menu-assistant', [AiMenuAssistantController::class, 'ask'])
+    ->middleware('throttle:5,1')
+    ->name('ai.ask');
 ```
 
-Add imports and handle timeouts/provider failures with explicit server logging.
-Validate each message's shape and maximum text length before forwarding. Never
-trust a user ID, order ID, or tool result supplied by the model.
+Generate `app/Http/Controllers/AiMenuAssistantController.php` with Artisan:
 
-In `resources/js/components/ai/OrderAssistant.vue`, the Vue SDK UI begins like
-this:
+```powershell
+docker compose exec laravel.test php artisan make:controller AiMenuAssistantController
+```
+
+Add these imports at the top of the controller:
+
+```php
+use App\Models\MenuItem;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
+use Inertia\Response;
+```
+
+Render the page with the one-request session answer:
+
+```php
+public function index(Request $request): Response
+{
+    return Inertia::render('ai/Index', [
+        'answer' => $request->session()->get('aiAnswer'),
+    ]);
+}
+```
+
+In the controller, validate input, build context from current public menu data,
+and call the provider. Keep the system instructions on the server:
+
+```php
+public function ask(Request $request): RedirectResponse
+{
+$data = $request->validate([
+    'question' => ['required', 'string', 'max:500'],
+]);
+
+$apiKey = config('services.openrouter.api_key');
+$model = config('services.openrouter.model');
+
+if (! is_string($apiKey) || $apiKey === '' || ! is_string($model) || $model === '') {
+    return back()->withErrors([
+        'question' => 'The menu assistant is not configured.',
+    ]);
+}
+
+$menu = MenuItem::query()
+    ->where('is_available', true)
+    ->orderBy('name')
+    ->limit(50)
+    ->get(['name', 'description', 'price_cents'])
+    ->map(fn (MenuItem $item): array => [
+        'name' => $item->name,
+        'description' => $item->description,
+        'price_cents' => $item->price_cents,
+    ])
+    ->all();
+
+try {
+    $response = Http::withToken($apiKey)
+        ->acceptJson()
+        ->timeout(15)
+        ->post(rtrim(config('services.openrouter.base_url'), '/').'/chat/completions', [
+            'model' => $model,
+            'messages' => [
+                [
+                    'role' => 'system',
+                    'content' => 'Answer briefly using only the supplied menu. '
+                        .'Do not invent prices or claim to place orders.',
+                ],
+                [
+                    'role' => 'user',
+                    'content' => json_encode($menu, JSON_THROW_ON_ERROR)
+                        ."\nQuestion: ".$data['question'],
+                ],
+            ],
+            'max_tokens' => 200,
+        ]);
+} catch (ConnectionException $exception) {
+    report($exception);
+
+    return back()->withErrors([
+        'question' => 'The menu assistant is temporarily unavailable.',
+    ]);
+}
+
+if ($response->failed()) {
+    Log::warning('Menu assistant provider request failed', [
+        'status' => $response->status(),
+    ]);
+
+    return back()->withErrors([
+        'question' => 'The menu assistant is temporarily unavailable.',
+    ]);
+}
+
+$answer = $response->json('choices.0.message.content');
+
+if (! is_string($answer) || trim($answer) === '') {
+    return back()->withErrors([
+        'question' => 'The menu assistant did not return an answer.',
+    ]);
+}
+
+$request->session()->flash('aiAnswer', $answer);
+
+return to_route('ai.index');
+}
+```
+Confirm the provider's current response schema before using a different model
+API. Never add automatic retries without considering duplicate provider cost.
+
+## Part C: build a small accessible Vue page
+
+Create `resources/js/pages/ai/Index.vue` using the project's existing form and
+layout patterns. Define the `answer: string | null` prop and use
+`useForm({ question: '' })` to post to the named route. Render the answer as
+ordinary text and show validation/provider errors beside the form. Disable
+submission while processing and do not use `v-html`.
+
+The essential form behavior looks like this:
 
 ```vue
 <script setup lang="ts">
-import { useChat } from '@ai-sdk/vue';
-import { DefaultChatTransport } from 'ai';
-import { ref } from 'vue';
+import { useForm } from '@inertiajs/vue3';
 
-const input = ref('');
-const { messages, sendMessage, status } = useChat({
-    transport: new DefaultChatTransport({
-        api: '/ai/chat',
-        fetch: (input, init) => {
-            const cookie = document.cookie
-                .split('; ')
-                .find((part) => part.startsWith('XSRF-TOKEN='));
-            const headers = new Headers(init?.headers);
-
-            if (cookie) {
-                headers.set(
-                    'X-XSRF-TOKEN',
-                    decodeURIComponent(cookie.slice('XSRF-TOKEN='.length)),
-                );
-            }
-
-            return fetch(input, {
-                ...init,
-                headers,
-                credentials: 'same-origin',
-            });
-        },
-    }),
-});
+const props = defineProps<{ answer: string | null }>();
+const form = useForm({ question: '' });
 
 function submit(): void {
-    const text = input.value.trim();
-    if (text === '' || status.value !== 'ready') {
-        return;
-    }
-
-    sendMessage({ text });
-    input.value = '';
+    form.post('/ai/menu-assistant', {
+        preserveScroll: true,
+        onSuccess: () => form.reset('question'),
+    });
 }
 </script>
+
+<template>
+    <form @submit.prevent="submit">
+        <label for="question">Ask about the menu</label>
+        <textarea
+            id="question"
+            v-model="form.question"
+            maxlength="500"
+            required
+        />
+        <p v-if="form.errors.question" role="alert">
+            {{ form.errors.question }}
+        </p>
+        <button type="submit" :disabled="form.processing">
+            {{ form.processing ? 'Thinking...' : 'Ask' }}
+        </button>
+        <p v-if="props.answer" role="status">{{ props.answer }}</p>
+    </form>
+</template>
 ```
 
-Render only text parts from the assistant and show loading/error states.
-Confirm the current Vue SDK's ref/template behavior against its installed
-version before finishing the component.
+The assistant is not authoritative. Link back to the menu and make the user
+confirm current availability and prices there.
 
-## Safe tool design
+## Tests
 
-Start with menu descriptions. If adding a read-only order-status tool, have
-Laravel verify `order.user_id === request.user().id` on every invocation and
-return only status and timestamps. Do not let the model cancel, submit, refund,
-or modify orders. Test the API with a fake provider response; do not spend free
-API quota in the normal test suite.
+In `tests/Feature/AiMenuAssistantTest.php`, follow the repository's PHPUnit
+test-class style and use `Http::fake()`:
+
+- Authenticated user receives a response from a fake provider.
+- Unauthenticated requests are redirected to login.
+- Invalid questions fail validation without an HTTP request.
+- Provider failure produces a safe error and never exposes provider details.
+- The test suite never calls OpenRouter or consumes a live quota.
+
+For the successful response case, fake the provider before sending the
+authenticated request:
+
+```php
+Http::fake([
+    'https://openrouter.ai/api/v1/chat/completions' => Http::response([
+        'choices' => [
+            ['message' => ['content' => 'The soup is currently available.']],
+        ],
+    ]),
+]);
+
+config([
+    'services.openrouter.api_key' => 'test-key',
+    'services.openrouter.model' => 'test-model',
+]);
+
+$this->actingAs(User::factory()->create())
+    ->post(route('ai.ask'), ['question' => 'Is the soup available?'])
+    ->assertRedirect(route('ai.index'))
+    ->assertSessionHas('aiAnswer', 'The soup is currently available.');
+```
+
+Add imports and the `RefreshDatabase` trait in the PHPUnit test class. Add
+separate tests for validation and provider failure; use `Http::assertNothingSent()`
+to prove invalid input never reaches the provider.
+
+## Branch closeout
+
+Review the changed diff, run the focused PHPUnit test and project checks, and
+merge `feature/ai-menu-assistant` only if the optional feature is worth keeping.
+
+## References
+
+- [Laravel HTTP client](https://laravel.com/docs/13.x/http-client)
+- [Laravel rate limiting](https://laravel.com/docs/13.x/rate-limiting)
+- [OpenRouter quickstart](https://openrouter.ai/docs/quickstart)
+- [OpenRouter FAQ](https://openrouter.ai/docs/faq)

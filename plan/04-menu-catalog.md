@@ -1,6 +1,6 @@
 # Step 4: Menu catalog and Eloquent
 
-**Days:** 10-12  
+**Days:** 16-20 (Week 4)  
 **Branch:** `feature/menu-catalog`
 
 ## Goal
@@ -8,7 +8,7 @@
 Learn migrations, Eloquent relationships, factories, seeders, and how to pass
 only the catalog data a page needs.
 
-## Day 10: Model the catalog
+## Day 16: Model the catalog
 
 - Sketch a small single-store catalog: categories and menu items.
 - Decide which values are required, whether an item is available, and how a
@@ -20,24 +20,41 @@ only the catalog data a page needs.
 
 **Checkpoint:** A fresh test database can migrate up and down cleanly.
 
-## Day 11: Realistic sample data
+## Day 17: Relationships and factories
 
-- Create factories and a seeder for a few categories and menu items.
+- Define and exercise the category-to-items Eloquent relationship.
+- Create factories with valid defaults and relationship setup.
+- Add a focused test that proves the relationship returns the expected items.
+
+**Checkpoint:** A factory-created item belongs to the expected category and
+does not rely on manual database edits.
+
+## Day 18: Repeatable sample data
+
+- Create a seeder for a few categories and menu items.
 - Use deterministic, safe development data; do not seed real customer details.
-- Add feature tests for category relationships and item availability.
 - Seed locally and inspect the records with Tinker or the database client.
 
 **Checkpoint:** Re-seeding produces a predictable demo catalog.
 
-## Day 12: Catalog page
+## Day 19: Query the catalog page
 
 - Replace the practice array from Step 3 with Eloquent data.
 - Select only fields needed by the storefront and order them consistently.
-- Add an empty state and an unavailable-item state.
-- Test that the page loads and unavailable items are clearly represented.
+- Add a simple search or category filter with validated query parameters.
 
 **Checkpoint:** Storefront data comes from the database, and the menu page is
-covered by a feature test.
+searchable without exposing unnecessary model fields.
+
+## Day 20: Prove the catalog behavior
+
+- Add PHPUnit feature tests for the rendered Inertia page, filtering, empty
+  results, and unavailable-item representation.
+- Reset and re-seed the local database once; confirm the documented commands
+  reproduce the same catalog.
+
+**Checkpoint:** The catalog's main behavior is covered by feature tests and
+works from a fresh database.
 
 ## Deliverable
 

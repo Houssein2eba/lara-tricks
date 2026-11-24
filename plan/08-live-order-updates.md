@@ -1,43 +1,63 @@
-# Step 7: Live order updates
+# Step 8: Live order updates
 
-**Days:** 19-21  
+**Days:** 36-40 (Week 8)  
 **Branch:** `feature/live-order-updates`
 
-## Goal
+## Learning goal
 
 Learn how Inertia props can be refreshed and distinguish polling from true
 server-pushed real-time events.
 
-## Day 19: Inertia live props
+## Day 36: Understand freshness and polling
 
-- Configure Reverb and Echo following the Laravel installer output.
-- Return the order through `Inertia::live()` and name the event that refreshes
-  it.
-- Return only the order props needed by the page; the live-prop update is a
-  partial reload, not a full document reload.
+- Start with a simple partial reload and a modest `usePoll` interval.
+- Measure request frequency and decide whether this small demo needs push
+  updates at all.
 
-**Checkpoint:** A status event from the staff dashboard updates the customer's
-order page without a manual refresh.
+**Checkpoint:** You can explain the trade-off between polling latency and
+server-sent updates before adding another service.
 
-## Day 20: Make updates safe and useful
+## Day 37: Configure broadcasts
 
-- Ensure every tracking query checks order ownership.
-- Display a clear status timeline and last-updated time.
-- Handle temporary network errors and pause/resume behavior.
-- Add tests for the tracking page's ownership and returned props.
+- If polling is not sufficient, add Laravel broadcasting and Reverb using the
+  framework's installer; review every generated change.
+- Configure local environment values and the Vue Echo integration.
+- If Reverb pushes Docker over your memory budget, keep the tested polling
+  implementation and skip this optional service.
 
-**Checkpoint:** A user cannot poll or view another customer's order by changing
-an ID.
+**Checkpoint:** If Reverb is enabled, a local test event is received by the
+correct browser session. Otherwise, record why polling is sufficient for this
+machine and continue with the tested polling implementation.
 
-## Day 21: Compare with polling
+## Day 38: Publish a minimal status event
 
-- Implement a polling fallback with Inertia's `usePoll` at a modest interval.
-- Compare request frequency and update latency with the live-prop version.
+- Broadcast only after a committed order status change.
+- Use a private channel and authorize it against the authenticated order owner.
+- Do not broadcast full models or customer contact details.
+
+**Checkpoint:** With Reverb enabled, unauthorized users cannot subscribe to
+another customer's order channel. If skipped, write the authorization rule
+that a future private channel must enforce.
+
+## Day 39: Refresh the customer's order page
+
+- Return only the order fields needed by the page through `Inertia::live()`.
+- Render a status timeline and last-updated time.
+- Handle connection loss without showing a false successful update.
+
+**Checkpoint:** With Reverb enabled, a staff status change refreshes the
+owner's page without a manual reload. Otherwise, the polling page refreshes
+only the owner's order props at the chosen interval.
+
+## Day 40: Compare, test, and decide
+
 - Keep polling only as a documented fallback; do not run it alongside live
   props by default.
+- Test event authorization and the returned order props.
+- Record the additional Compose memory and operational cost of Reverb.
 
-**Checkpoint:** Document when polling is useful and why the primary
-implementation uses event-driven live props.
+**Checkpoint:** The feature has ownership tests and a reasoned choice of push
+updates versus polling.
 
 ## Deliverable
 
@@ -101,7 +121,8 @@ seconds. Polling is an acceptable fallback, but it is not push-based.
 
 ## Part B: configure Reverb and Echo
 
-Install the Laravel broadcasting scaffolding in a separate branch checkpoint:
+On `feature/live-order-updates`, install the Laravel broadcasting scaffolding
+only after the polling version works:
 
 ```powershell
 docker compose exec laravel.test php artisan install:broadcasting

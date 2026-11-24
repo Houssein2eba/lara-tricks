@@ -1,6 +1,6 @@
 # Step 2: Vue fundamentals
 
-**Days:** 4-6  
+**Days:** 6-10 (Week 2)  
 **Branch:** `learn/vue-fundamentals`
 
 ## Goal
@@ -8,7 +8,7 @@
 Learn enough Vue 3 and TypeScript to build interactive screens without moving
 business rules or secrets into the browser.
 
-## Day 4: Single-file components
+## Day 6: Read a single-file component
 
 - Read the Vue guide sections on components and templates.
 - Inspect an existing page under `resources/js/pages/` and a small component
@@ -19,7 +19,16 @@ business rules or secrets into the browser.
 **Checkpoint:** The component renders a name, description, formatted price, and
 availability state from props only.
 
-## Day 5: Reactivity and events
+## Day 7: Props, templates, and conditional rendering
+
+- Practice `v-if`, `v-for`, keys, and class bindings with the menu card.
+- Keep the template declarative; put formatting/derivation in script setup.
+- Add an empty list and unavailable-item state.
+
+**Checkpoint:** The page handles zero, one, and several items without a
+console error or duplicated markup.
+
+## Day 8: Reactivity and events
 
 - Learn `ref`, `computed`, `v-if`, `v-for`, and event handling.
 - Add a quantity selector and an add-to-cart event to the practice card.
@@ -30,11 +39,22 @@ availability state from props only.
 **Checkpoint:** A small parent page can receive the event and update a visible
 cart count.
 
-## Day 6: Reusable UI and TypeScript
+## Day 9: TypeScript and component contracts
+
+- Type props, emitted events, and state; use `type` imports for data-only
+  imports.
+- Make invalid states hard to express, and avoid `any` and unsafe casts.
+- Explain the difference between `ref` state and a `computed` value.
+
+**Checkpoint:** `npm run types:check` passes and the parent-child event contract
+is explicit.
+
+## Day 10: Reusable UI and accessibility
 
 - Compose the practice card with existing project UI components and styling.
-- Type the props, emitted event, and local state; avoid `any`.
-- Add loading, empty, and error states to the practice page.
+- Add labels, keyboard-operable controls, visible focus, and sensible loading
+  and error states.
+- Inspect the page at narrow and wide viewport sizes.
 - Run `npm run check`, `npm run types:check`, and `npm run build` inside the
   container.
 
@@ -48,8 +68,9 @@ real database data; that separation makes Vue behavior easier to understand.
 
 ## Branch closeout
 
-Review the diff, explain `ref` versus `computed`, run the checks above, and
-merge `learn/vue-fundamentals` before beginning Step 3.
+Review the diff, explain `ref` versus `computed` and props versus local state,
+run the checks above, and merge `learn/vue-fundamentals` before beginning
+Step 3.
 
 ## References
 

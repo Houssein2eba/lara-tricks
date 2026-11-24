@@ -1,7 +1,7 @@
 # Step 3: Inertia pages, props, and navigation
 
-**Days:** 7-9  
-**Branch:** `learn/inertia-pages-props`
+**Days:** 11-15 (Week 3)  
+**Branch:** `learn/inertia-workflow`
 
 ## Goal
 
@@ -9,35 +9,50 @@ Understand Inertia as the connection between Laravel routes/controllers and
 Vue pages. A page prop is a server-provided snapshot; it is not automatically
 live data.
 
-## Day 7: Trace an existing request
+## Day 11: Trace an existing request
 
 - Trace `/` from `routes/web.php` to `Welcome.vue`.
 - Trace the authenticated dashboard route and the app layout.
-- Change a small server-provided page title or welcome prop, then observe it in
-  Vue.
 - Explain which code runs on the server and which runs in the browser.
 
 **Checkpoint:** Draw the request path: URL -> route -> controller/page response
 -> Inertia props -> Vue render.
 
-## Day 8: Real server data
+## Day 12: Return typed server data
 
 - Add a simple server endpoint/controller that returns a typed list of practice
   menu items as props.
 - Render the list with the menu-card component from Step 2.
-- Use Inertia links for navigation rather than full-page anchors for internal
-  pages.
 - Keep queries and authorization on the Laravel side.
 
 **Checkpoint:** The menu page renders server data and navigation works without
 losing the authenticated layout.
 
-## Day 9: Forms and validation feedback
+## Day 13: Navigation and page state
+
+- Use Inertia links for internal navigation and standard anchors for external
+  destinations.
+- Add one named route and use the project's existing Wayfinder patterns where
+  appropriate.
+- Observe what state is preserved during navigation and what is reloaded.
+
+**Checkpoint:** Internal navigation works without a full document reload, and
+the route name remains the single source of truth.
+
+## Day 14: Forms and server validation
 
 - Inspect existing profile form patterns and Inertia form helpers in this repo.
 - Submit a small search or filter form to Laravel.
 - Return validation errors and display them beside the relevant control.
-- Run the frontend checks and Laravel feature tests.
+
+**Checkpoint:** Invalid input is rejected by Laravel and the user sees the
+server's field-level error.
+
+## Day 15: Loading states and feature tests
+
+- Handle processing, empty, and failed states in the Vue page.
+- Add a PHPUnit feature test for the route's returned Inertia component and
+  props; run the focused test and frontend checks.
 
 **Checkpoint:** A failed form submission displays useful server validation
 without a full page error.
@@ -50,7 +65,7 @@ validated form.
 ## Branch closeout
 
 Review props for unnecessary or sensitive fields, run checks, and merge
-`learn/inertia-pages-props`.
+`learn/inertia-workflow`.
 
 ## References
 

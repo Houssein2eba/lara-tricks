@@ -1,6 +1,6 @@
 # Step 5: Cart and checkout
 
-**Days:** 13-15  
+**Days:** 21-25 (Week 5)  
 **Branches:** `feature/cart`, then `feature/checkout`
 
 ## Goal
@@ -8,10 +8,12 @@
 Build a useful customer flow while learning server-side validation, ownership,
 and database transactions.
 
-## Days 13-14: `feature/cart`
+## Days 21-23: `feature/cart`
 
 - Start from updated `main` and create `feature/cart`.
-- Add, remove, and change item quantities from the Vue storefront.
+- Day 21: define the server-side session cart shape and add one item.
+- Day 22: add remove/update quantity actions and clear unavailable items.
+- Day 23: build the cart page and test boundary quantities and tampered input.
 - Keep the cart in the server session for this learning project; never trust a
   client-submitted price or total.
 - Display a derived subtotal and disable unavailable items.
@@ -20,12 +22,14 @@ and database transactions.
 **Checkpoint:** Refreshing the page preserves the cart, and tampering with
 client-side prices cannot alter the server-calculated total.
 
-## Day 15: `feature/checkout`
+## Days 24-25: `feature/checkout`
 
 - Merge the cart branch, then branch from updated `main`.
-- Add `orders` and `order_items` migrations with clear relationships.
-- On checkout, re-fetch current catalog prices and create the order and item
-  snapshots inside a database transaction.
+- Day 24: add `orders` and `order_items` migrations and Eloquent relationships.
+- Day 25: implement checkout and test success, invalid cart, and server-priced
+  snapshots.
+- Re-fetch current catalog prices and create the order and item snapshots
+  inside a database transaction.
 - Store item name and unit price snapshots so later catalog edits do not rewrite
   old receipts.
 - Require the authenticated customer and validate the checkout request.
@@ -46,7 +50,7 @@ An authenticated customer can build a cart and place a demo order safely.
 
 ## Branch closeout
 
-Run the order feature tests and review transaction/price logic. Merge
+Run the cart and checkout feature tests and review transaction/price logic. Merge
 `feature/cart`, then `feature/checkout`.
 
 ## References
@@ -62,6 +66,8 @@ app/Http/Controllers/CartController.php
 app/Http/Controllers/CheckoutController.php
 app/Models/Order.php
 app/Models/OrderItem.php
+database/factories/OrderFactory.php
+database/factories/OrderItemFactory.php
 database/migrations/*_create_orders_table.php
 database/migrations/*_create_order_items_table.php
 resources/js/pages/cart/Index.vue
@@ -74,8 +80,8 @@ quantities only; the server always looks up availability and price again.
 Generate the starting models/migrations before editing them:
 
 ```powershell
-docker compose exec laravel.test php artisan make:model Order -m
-docker compose exec laravel.test php artisan make:model OrderItem -m
+docker compose exec laravel.test php artisan make:model Order -mf
+docker compose exec laravel.test php artisan make:model OrderItem -mf
 ```
 
 ## Part A: add items to the session cart
@@ -86,6 +92,10 @@ Add routes inside the existing authenticated/verified group in `routes/web.php`:
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/cart/items/{menuItem}', [CartController::class, 'store'])
         ->name('cart.items.store');
+    Route::put('/cart/items/{menuItem}', [CartController::class, 'update'])
+        ->name('cart.items.update');
+    Route::delete('/cart/items/{menuItem}', [CartController::class, 'destroy'])
+        ->name('cart.items.destroy');
     Route::get('/cart', [CartController::class, 'show'])->name('cart.show');
     Route::post('/checkout', [CheckoutController::class, 'store'])
         ->name('checkout.store');
@@ -118,10 +128,20 @@ public function store(Request $request, MenuItem $menuItem): RedirectResponse
 }
 ```
 
-Create a `show` action that loads the IDs from the session with
-`MenuItem::whereIn('id', array_keys($cart))->where('is_available', true)`.
-Return only `id`, `name`, `price_cents`, and the session quantity. Calculate
-the subtotal from those current server-side prices.
+For `update`, validate the new quantity between 1 and 10 and reject unavailable
+items. For `destroy`, remove the route-bound item ID from the session cart and
+redirect back. The `show` action loads the session IDs from the database,
+returns only the fields needed by the page, and includes availability so a
+stale item can be removed. Calculate subtotal only from currently available
+items and their current server-side prices.
+
+The Vue cart page should use Inertia requests rather than changing the session
+in the browser:
+
+```ts
+router.put(`/cart/items/${item.id}`, { quantity }, { preserveScroll: true });
+router.delete(`/cart/items/${item.id}`, { preserveScroll: true });
+```
 
 In `resources/js/pages/menu/Index.vue`, replace the local-only add handler with
 an Inertia request:
@@ -186,6 +206,12 @@ public function items(): HasMany
 In `app/Models/OrderItem.php`, add the inverse `order()` relationship. Add
 explicit fillable fields to both models; never mass-assign `user_id` directly
 from request data.
+
+Keep the generated factories small and valid. For example, the order factory
+should provide a customer, a pending status, and a zero total; the order-item
+factory should provide an order, a snapshot name/price, and a positive
+quantity. Tests can override these defaults with `for($customer)` and
+`state([...])` rather than hand-editing the database.
 
 In `CheckoutController::store`, validate the session cart against current
 database rows, then create the order and snapshots in one transaction:
